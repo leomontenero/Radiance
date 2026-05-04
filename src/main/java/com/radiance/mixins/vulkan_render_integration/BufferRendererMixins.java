@@ -6,23 +6,23 @@ import com.radiance.client.proxy.vulkan.BufferProxy;
 import com.radiance.client.proxy.vulkan.ShaderProxy;
 import com.radiance.client.shader.ShaderDefinition;
 import com.radiance.client.shader.ShaderRegistry;
-import net.minecraft.client.gl.ShaderProgram;
-import net.minecraft.client.render.BufferRenderer;
-import net.minecraft.client.render.BuiltBuffer;
+import net.minecraft.client.renderer.CompiledShaderProgram;
+import com.mojang.blaze3d.vertex.BufferUploader;
+import com.mojang.blaze3d.vertex.MeshData;
 import org.lwjgl.system.MemoryStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(BufferRenderer.class)
+@Mixin(BufferUploader.class)
 public class BufferRendererMixins {
 
-    @Inject(method = "drawWithGlobalProgram(Lnet/minecraft/client/render/BuiltBuffer;)V",
+    @Inject(method = "drawWithGlobalProgram(Lcom/mojang/blaze3d/vertex/MeshData;)V",
         at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;assertOnRenderThread()V", shift = At.Shift.AFTER, remap = false),
         cancellable = true)
-    private static void rewriteDrawWithGlobalProgram(BuiltBuffer buffer, CallbackInfo ci) {
-        ShaderProgram shaderProgram = RenderSystem.getShader();
+    private static void rewriteDrawWithGlobalProgram(MeshData buffer, CallbackInfo ci) {
+        CompiledShaderProgram shaderProgram = RenderSystem.getShader();
         if (shaderProgram == null) {
             buffer.close();
             throw new IllegalStateException(

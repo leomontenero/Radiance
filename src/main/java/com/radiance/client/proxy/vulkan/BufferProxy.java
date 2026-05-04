@@ -12,13 +12,13 @@ import com.radiance.client.texture.TextureTracker;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.Map;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.BuiltBuffer;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.Fog;
-import net.minecraft.client.render.RenderPhase;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.world.ClientWorld;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.vertex.MeshData;
+import net.minecraft.client.Camera;
+import net.minecraft.client.renderer.FogParameters;
+import net.minecraft.client.renderer.RenderStateShard;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.multiplayer.ClientLevel;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.lwjgl.system.MemoryStack;
@@ -53,9 +53,9 @@ public class BufferProxy {
     public static native void performQueuedUpload();
 
     public static VertexIndexBufferHandle createAndUploadVertexIndexBuffer(
-        BuiltBuffer builtBuffer) {
-        BuiltBuffer.DrawParameters drawParameters = builtBuffer.getDrawParameters();
-        assert builtBuffer.getDrawParameters().mode() == VertexFormat.DrawMode.QUADS;
+        MeshData builtBuffer) {
+        MeshData.DrawParameters drawParameters = builtBuffer.getDrawParameters();
+        assert builtBuffer.getDrawParameters().mode() == VertexFormat.Mode.QUADS;
 
         int vertexSize = drawParameters.vertexCount() * drawParameters.format().getVertexSizeByte();
         int vertexId = allocateBuffer();
@@ -117,8 +117,8 @@ public class BufferProxy {
     public static native void updateWorldUniform(long ptr);
 
     public static void updateWorldUniform(Camera camera, Matrix4f viewMatrix,
-        Matrix4f effectedViewMatrix, Matrix4f projectionMatrix, int overlayTextureID, Fog fog,
-        ClientWorld world, int endSkyTextureID, int endPortalTextureID, int lightMapTextureID) {
+        Matrix4f effectedViewMatrix, Matrix4f projectionMatrix, int overlayTextureID, FogParameters fog,
+        ClientLevel world, int endSkyTextureID, int endPortalTextureID, int lightMapTextureID) {
         try (MemoryStack stack = stackPush()) {
             int size = 592;
             ByteBuffer bb = stack.malloc(size);
@@ -143,7 +143,7 @@ public class BufferProxy {
 
             baseAddr += Integer.BYTES; // skip seed
 
-            RenderPhase.setupGlintTexturing(0.16F);
+            RenderStateShard.setupGlintTexturing(0.16F);
             Matrix4f textureMat = RenderSystem.getTextureMatrix();
             textureMat.get(baseAddr, bb);
             baseAddr += Float.BYTES * 16;

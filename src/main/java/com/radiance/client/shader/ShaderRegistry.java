@@ -20,9 +20,9 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import net.minecraft.client.gl.GlUniform;
-import net.minecraft.client.gl.ShaderProgram;
-import net.minecraft.client.render.VertexFormat;
+import com.mojang.blaze3d.opengl.Uniform;
+import net.minecraft.client.renderer.CompiledShaderProgram;
+import com.mojang.blaze3d.vertex.VertexFormat;
 
 public final class ShaderRegistry {
 
@@ -30,13 +30,13 @@ public final class ShaderRegistry {
         "^\\s*(?:layout\\s*\\([^)]*\\)\\s*)?uniform\\s+sampler\\w+\\s+(\\w+)\\s*;\\s*$");
     private static final Pattern SAMPLER_SLOT_PATTERN = Pattern.compile("\\bSampler(\\d+)\\b");
 
-    private static final Map<ShaderProgram, ShaderDefinition> CACHE =
+    private static final Map<CompiledShaderProgram, ShaderDefinition> CACHE =
         Collections.synchronizedMap(new WeakHashMap<>());
 
     private ShaderRegistry() {
     }
 
-    public static ShaderDefinition getOrCreate(ShaderProgram shaderProgram) {
+    public static ShaderDefinition getOrCreate(CompiledShaderProgram shaderProgram) {
         ShaderDefinition cached = CACHE.get(shaderProgram);
         if (cached != null) {
             return cached;
@@ -51,7 +51,7 @@ public final class ShaderRegistry {
         CACHE.clear();
     }
 
-    private static ShaderDefinition create(ShaderProgram shaderProgram) {
+    private static ShaderDefinition create(CompiledShaderProgram shaderProgram) {
         IShaderProgramExt ext = (IShaderProgramExt) (Object) shaderProgram;
         VertexFormat vertexFormat = ext.radiance$getVertexFormat();
         String vertexSource = ext.radiance$getVertexSource();
@@ -86,12 +86,12 @@ public final class ShaderRegistry {
         return new ShaderDefinition(key, shaderName, nativeId, result.uniformBufferSize(), fields);
     }
 
-    private static List<ShaderField> buildFields(List<GlUniform> uniforms,
+    private static List<ShaderField> buildFields(List<Uniform> uniforms,
         List<String> samplerNames, String vertexSource, String fragmentSource) {
         ArrayList<ShaderField> fields = new ArrayList<>();
         int offset = 0;
 
-        for (GlUniform uniform : uniforms) {
+        for (Uniform uniform : uniforms) {
             IGlUniformExt ext = (IGlUniformExt) (Object) uniform;
             int dataType = ext.radiance$getDataTypeValue();
             int componentCount = getComponentCount(dataType);

@@ -3,8 +3,8 @@ package com.radiance.client.texture;
 import com.radiance.client.constant.VulkanConstants;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.util.Identifier;
+import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.resources.Identifier;
 
 public class TextureTracker {
 

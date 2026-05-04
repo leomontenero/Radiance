@@ -1,6 +1,6 @@
 package com.radiance.client.vertex;
 
-import net.minecraft.client.render.VertexFormatElement;
+import com.mojang.blaze3d.vertex.VertexFormatElement;
 
 public class PBRVertexFormatElements {
 

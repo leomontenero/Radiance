@@ -1,25 +1,25 @@
 package com.radiance.mixins.vulkan_render_integration;
 
-import static net.minecraft.client.render.block.FluidRenderer.shouldRenderSide;
+import static net.minecraft.client.renderer.block.LiquidBlockRenderer.shouldRenderSide;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.LeavesBlock;
-import net.minecraft.block.TranslucentBlock;
-import net.minecraft.client.color.world.BiomeColors;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.block.FluidRenderer;
-import net.minecraft.client.texture.Sprite;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.registry.tag.FluidTags;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.BlockRenderView;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.HalfTransparentBlock;
+import net.minecraft.client.renderer.BiomeColors;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.block.LiquidBlockRenderer;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -28,19 +28,19 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(FluidRenderer.class)
+@Mixin(LiquidBlockRenderer.class)
 public abstract class FluidRendererMixins {
 
     @Final
     @Shadow
-    private Sprite[] lavaSprites;
+    private TextureAtlasSprite[] lavaSprites;
 
     @Final
     @Shadow
-    private Sprite[] waterSprites;
+    private TextureAtlasSprite[] waterSprites;
 
     @Shadow
-    private Sprite waterOverlaySprite;
+    private TextureAtlasSprite waterOverlaySprite;
 
     @Shadow
     private static boolean isSameFluid(FluidState a, FluidState b) {
@@ -50,14 +50,14 @@ public abstract class FluidRendererMixins {
     @Shadow
     private static boolean isSideCovered(Direction direction, float f, BlockState blockState) {
         VoxelShape voxelShape = blockState.getCullingFace(direction.getOpposite());
-        if (voxelShape == VoxelShapes.empty()) {
+        if (voxelShape == Shapes.empty()) {
             return false;
-        } else if (voxelShape == VoxelShapes.fullCube()) {
+        } else if (voxelShape == Shapes.fullCube()) {
             boolean bl = f == 1.0F;
             return direction != Direction.UP || bl;
         } else {
-            VoxelShape voxelShape2 = VoxelShapes.cuboid(0.0, 0.0, 0.0, 1.0, f, 1.0);
-            return VoxelShapes.isSideCovered(voxelShape2, voxelShape, direction);
+            VoxelShape voxelShape2 = Shapes.cuboid(0.0, 0.0, 0.0, 1.0, f, 1.0);
+            return Shapes.isSideCovered(voxelShape2, voxelShape, direction);
         }
     }
 
@@ -72,7 +72,7 @@ public abstract class FluidRendererMixins {
     }
 
     @Shadow
-    protected abstract float calculateFluidHeight(BlockRenderView world,
+    protected abstract float calculateFluidHeight(BlockAndTintGetter world,
         Fluid fluid,
         float originHeight,
         float northSouthHeight,
@@ -83,14 +83,14 @@ public abstract class FluidRendererMixins {
     protected abstract void addHeight(float[] weightedAverageHeight, float height);
 
     @Shadow
-    protected abstract float getFluidHeight(BlockRenderView world, Fluid fluid, BlockPos pos);
+    protected abstract float getFluidHeight(BlockAndTintGetter world, Fluid fluid, BlockPos pos);
 
     @Shadow
-    protected abstract float getFluidHeight(BlockRenderView world, Fluid fluid, BlockPos pos,
+    protected abstract float getFluidHeight(BlockAndTintGetter world, Fluid fluid, BlockPos pos,
         BlockState blockState, FluidState fluidState);
 
     @Shadow
-    protected abstract int getLight(BlockRenderView world, BlockPos pos);
+    protected abstract int getLight(BlockAndTintGetter world, BlockPos pos);
 
     @Unique
     private void vertex(VertexConsumer vertexConsumer,
@@ -114,18 +114,18 @@ public abstract class FluidRendererMixins {
     }
 
     @Inject(method =
-        "render(Lnet/minecraft/world/BlockRenderView;Lnet/minecraft/util/math/BlockPos;" +
-            "Lnet/minecraft/client/render/VertexConsumer;Lnet/minecraft/block/BlockState;Lnet/minecraft/fluid/FluidState;)V",
+        "render(Lnet/minecraft/world/level/BlockAndTintGetter;Lnet/minecraft/core/BlockPos;" +
+            "Lcom/mojang/blaze3d/vertex/VertexConsumer;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/material/FluidState;)V",
         at = @At(value = "HEAD"),
         cancellable = true)
-    public void addNormalToVertex(BlockRenderView world,
+    public void addNormalToVertex(BlockAndTintGetter world,
         BlockPos pos,
         VertexConsumer vertexConsumer,
         BlockState blockState,
         FluidState fluidState,
         CallbackInfo ci) {
         boolean isLava = fluidState.isIn(FluidTags.LAVA);
-        Sprite[] fluidSprites = isLava ? this.lavaSprites : this.waterSprites;
+        TextureAtlasSprite[] fluidSprites = isLava ? this.lavaSprites : this.waterSprites;
         int tintColor = isLava ? 16777215 : BiomeColors.getWaterColor(world, pos);
         float red = (tintColor >> 16 & 0xFF) / 255.0F;
         float green = (tintColor >> 8 & 0xFF) / 255.0F;
@@ -230,11 +230,11 @@ public abstract class FluidRendererMixins {
                 heightSE -= 0.001F;
                 heightNE -= 0.001F;
 
-                Vec3d flowVector = fluidState.getVelocity(world, pos);
+                Vec3 flowVector = fluidState.getVelocity(world, pos);
                 float u1, v1, u2, v2, u3, v3, u4, v4; // 对应四个角的UV
 
                 if (flowVector.x == 0.0 && flowVector.z == 0.0) {
-                    Sprite stillSprite = fluidSprites[0];
+                    TextureAtlasSprite stillSprite = fluidSprites[0];
                     u1 = stillSprite.getFrameU(0.0F);
                     v1 = stillSprite.getFrameV(0.0F);
                     u2 = u1;
@@ -244,12 +244,12 @@ public abstract class FluidRendererMixins {
                     u4 = u3;
                     v4 = v1;
                 } else {
-                    Sprite flowSprite = fluidSprites[1];
+                    TextureAtlasSprite flowSprite = fluidSprites[1];
                     float angle =
-                        (float) MathHelper.atan2(flowVector.z, flowVector.x) - (float) (Math.PI
+                        (float) Mth.atan2(flowVector.z, flowVector.x) - (float) (Math.PI
                             / 2);
-                    float sin = MathHelper.sin(angle) * 0.25F;
-                    float cos = MathHelper.cos(angle) * 0.25F;
+                    float sin = Mth.sin(angle) * 0.25F;
+                    float cos = Mth.cos(angle) * 0.25F;
 
                     u1 = flowSprite.getFrameU(0.5F + (-cos - sin));
                     v1 = flowSprite.getFrameV(0.5F + (-cos + sin));
@@ -265,14 +265,14 @@ public abstract class FluidRendererMixins {
                 float vAvg = (v1 + v2 + v3 + v4) / 4.0F;
                 float animationDelta = fluidSprites[0].getAnimationFrameDelta();
 
-                u1 = MathHelper.lerp(animationDelta, u1, uAvg);
-                u2 = MathHelper.lerp(animationDelta, u2, uAvg);
-                u3 = MathHelper.lerp(animationDelta, u3, uAvg);
-                u4 = MathHelper.lerp(animationDelta, u4, uAvg);
-                v1 = MathHelper.lerp(animationDelta, v1, vAvg);
-                v2 = MathHelper.lerp(animationDelta, v2, vAvg);
-                v3 = MathHelper.lerp(animationDelta, v3, vAvg);
-                v4 = MathHelper.lerp(animationDelta, v4, vAvg);
+                u1 = Mth.lerp(animationDelta, u1, uAvg);
+                u2 = Mth.lerp(animationDelta, u2, uAvg);
+                u3 = Mth.lerp(animationDelta, u3, uAvg);
+                u4 = Mth.lerp(animationDelta, u4, uAvg);
+                v1 = Mth.lerp(animationDelta, v1, vAvg);
+                v2 = Mth.lerp(animationDelta, v2, vAvg);
+                v3 = Mth.lerp(animationDelta, v3, vAvg);
+                v4 = Mth.lerp(animationDelta, v4, vAvg);
 
                 int packedLight = this.getLight(world, pos);
                 float shadedRed = lightUp * red;
@@ -288,7 +288,7 @@ public abstract class FluidRendererMixins {
                 float normalY = 1.0F; // 基础垂直分量
 
                 // 归一化
-                float length = MathHelper.sqrt(
+                float length = Mth.sqrt(
                     normalX * normalX + normalY * normalY + normalZ * normalZ);
                 normalX /= length;
                 normalY /= length;
@@ -528,13 +528,13 @@ public abstract class FluidRendererMixins {
                 if (shouldRenderSide && !method_3344(direction, Math.max(yStart, yEnd),
                     world.getBlockState(pos.offset(direction)))) {
                     BlockPos sidePos = pos.offset(direction);
-                    Sprite sideSprite = fluidSprites[1];
+                    TextureAtlasSprite sideSprite = fluidSprites[1];
                     if (!isLava) {
                         Block
                             sideBlock =
                             world.getBlockState(sidePos)
                                 .getBlock();
-                        if (sideBlock instanceof TranslucentBlock
+                        if (sideBlock instanceof HalfTransparentBlock
                             || sideBlock instanceof LeavesBlock) {
                             sideSprite = this.waterOverlaySprite;
                         }

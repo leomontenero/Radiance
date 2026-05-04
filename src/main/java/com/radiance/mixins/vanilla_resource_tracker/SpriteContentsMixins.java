@@ -3,8 +3,8 @@ package com.radiance.mixins.vanilla_resource_tracker;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.radiance.mixin_related.extensions.vanilla_resource_tracker.INativeImageExt;
 import com.radiance.mixin_related.extensions.vanilla_resource_tracker.ISpriteContentsExt;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.SpriteContents;
+import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.client.renderer.texture.SpriteContents;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -27,8 +27,8 @@ public class SpriteContentsMixins implements ISpriteContentsExt {
         this.targetID = targetID;
     }
 
-    @Inject(method = "upload(IIII[Lnet/minecraft/client/texture/NativeImage;)V",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/texture/NativeImage;upload(IIIIIIIZ)V"))
+    @Inject(method = "upload(IIII[Lcom/mojang/blaze3d/platform/NativeImage;)V",
+        at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/NativeImage;upload(IIIIIIIZ)V"))
     public void setImageTargetIDBeforeUpload(int x,
         int y,
         int unpackSkipPixels,

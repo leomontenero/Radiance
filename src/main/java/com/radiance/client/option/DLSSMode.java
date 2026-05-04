@@ -6,16 +6,16 @@ import static com.radiance.client.option.Options.DLSS_MODE_PERFORMANCE;
 import static com.radiance.client.option.Options.DLSS_MODE_QUALITY;
 
 import com.mojang.serialization.Codec;
-import net.minecraft.util.StringIdentifiable;
-import net.minecraft.util.TranslatableOption;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.util.OptionEnum;
 
-public enum DLSSMode implements TranslatableOption, StringIdentifiable {
+public enum DLSSMode implements OptionEnum, StringRepresentable {
     PERFORMANCE(0, "performance", DLSS_MODE_PERFORMANCE),
     BALANCED(1, "balanced", DLSS_MODE_BALANCED),
     QUALITY(2, "quality", DLSS_MODE_QUALITY),
     DLAA(3, "dlaa", DLSS_MODE_DLAA);
 
-    public static final Codec<DLSSMode> Codec = StringIdentifiable.createCodec(DLSSMode::values);
+    public static final Codec<DLSSMode> Codec = StringRepresentable.createCodec(DLSSMode::values);
     private final int ordinal;
     private final String name;
     private final String translationKey;

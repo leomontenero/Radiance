@@ -1,7 +1,7 @@
 package com.radiance.client.gui;
 
 import com.radiance.client.pipeline.Module;
-import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.Font;
 
 public class ModuleNode {
 
@@ -26,7 +26,7 @@ public class ModuleNode {
         return headerH + pad + rows() * rowH + pad;
     }
 
-    public void updateWidth(TextRenderer textRenderer) {
+    public void updateWidth(Font textRenderer) {
         int maxInWidth = 0;
         if (module.inputImageConfigs != null) {
             for (var in : module.inputImageConfigs) {

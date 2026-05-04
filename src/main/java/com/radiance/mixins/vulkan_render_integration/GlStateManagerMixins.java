@@ -1,6 +1,6 @@
 package com.radiance.mixins.vulkan_render_integration;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.opengl.GlStateManager;
 import com.radiance.client.constant.VulkanConstants;
 import com.radiance.client.proxy.vulkan.DrawCommandProxy;
 import com.radiance.client.proxy.vulkan.PipelineStateProxy;

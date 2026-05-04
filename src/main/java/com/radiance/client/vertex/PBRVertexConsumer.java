@@ -20,18 +20,18 @@ import static com.radiance.client.vertex.PBRVertexFormatElements.PBR_USE_TEXTURE
 
 import java.nio.ByteOrder;
 import java.util.stream.Collectors;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.BuiltBuffer;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.RenderPhase;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.render.VertexFormatElement;
-import net.minecraft.client.texture.MissingSprite;
-import net.minecraft.client.util.BufferAllocator;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Direction;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.vertex.MeshData;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.RenderStateShard;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormatElement;
+import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.resources.Identifier;
+import net.minecraft.core.Direction;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
@@ -53,9 +53,9 @@ public class PBRVertexConsumer implements VertexConsumer {
     private static final int POST_TEXT_MODE_INTENSITY_POLYGON_OFFSET = 7;
     private static final int POST_TEXT_MODE_RGBA_POLYGON_OFFSET = 8;
 
-    private final BufferAllocator allocator;
+    private final ByteBufferBuilder allocator;
     private final VertexFormat format;
-    private final VertexFormat.DrawMode drawMode;
+    private final VertexFormat.Mode drawMode;
 
     private final int vertexSizeByte;
     private final int writableMask;
@@ -72,12 +72,12 @@ public class PBRVertexConsumer implements VertexConsumer {
     private float baseY = 0;
     private float baseZ = 0;
 
-    public PBRVertexConsumer(BufferAllocator allocator, RenderLayer renderLayer) {
-        this(allocator, VertexFormat.DrawMode.QUADS, PBRVertexFormats.PBR_TRIANGLE, renderLayer);
+    public PBRVertexConsumer(ByteBufferBuilder allocator, RenderType renderLayer) {
+        this(allocator, VertexFormat.Mode.QUADS, PBRVertexFormats.PBR_TRIANGLE, renderLayer);
     }
 
-    private PBRVertexConsumer(BufferAllocator allocator, VertexFormat.DrawMode drawMode,
-        VertexFormat format, RenderLayer renderLayer) {
+    private PBRVertexConsumer(ByteBufferBuilder allocator, VertexFormat.Mode drawMode,
+        VertexFormat format, RenderType renderLayer) {
         this.allocator = allocator;
         this.drawMode = drawMode;
         this.format = format;
@@ -95,13 +95,13 @@ public class PBRVertexConsumer implements VertexConsumer {
             throw new IllegalArgumentException("PBR format must contain POSITION element");
         }
 
-        if (renderLayer instanceof RenderLayer.MultiPhase) {
+        if (renderLayer instanceof RenderType.MultiPhase) {
             Identifier
                 identifier =
-                ((RenderLayer.MultiPhase) renderLayer).phases.texture.getId()
-                    .orElse(MissingSprite.getMissingSpriteId());
+                ((RenderType.MultiPhase) renderLayer).phases.texture.getId()
+                    .orElse(MissingTextureAtlasSprite.getMissingSpriteId());
             textureID =
-                MinecraftClient.getInstance()
+                Minecraft.getInstance()
                     .getTextureManager()
                     .getTexture(identifier)
                     .getGlId();
@@ -118,8 +118,8 @@ public class PBRVertexConsumer implements VertexConsumer {
         }
     }
 
-    private static int getAlphaMode(RenderLayer renderLayer) {
-        if (!(renderLayer instanceof RenderLayer.MultiPhase multiPhase)) {
+    private static int getAlphaMode(RenderType renderLayer) {
+        if (!(renderLayer instanceof RenderType.MultiPhase multiPhase)) {
             return ALPHA_MODE_OPAQUE;
         }
 
@@ -136,7 +136,7 @@ public class PBRVertexConsumer implements VertexConsumer {
             return ALPHA_MODE_CUTOUT;
         }
 
-        if (RenderPhase.NO_TRANSPARENCY.equals(multiPhase.phases.transparency)) {
+        if (RenderStateShard.NO_TRANSPARENCY.equals(multiPhase.phases.transparency)) {
             return ALPHA_MODE_CUTOUT;
         }
 
@@ -178,17 +178,17 @@ public class PBRVertexConsumer implements VertexConsumer {
     }
 
     @Nullable
-    public BuiltBuffer endNullable() {
+    public MeshData endNullable() {
         ensureBuilding();
         endVertex();
-        BuiltBuffer built = build();
+        MeshData built = build();
         building = false;
         vertexPointer = -1L;
         return built;
     }
 
-    public BuiltBuffer end() {
-        BuiltBuffer built = endNullable();
+    public MeshData end() {
+        MeshData built = endNullable();
         if (built == null) {
             throw new IllegalStateException("PBRBufferBuilder was empty");
         }
@@ -196,20 +196,20 @@ public class PBRVertexConsumer implements VertexConsumer {
     }
 
     @Nullable
-    private BuiltBuffer build() {
+    private MeshData build() {
         if (vertexCount == 0) {
             return null;
         }
 
-        BufferAllocator.CloseableBuffer buf = allocator.getAllocated();
+        ByteBufferBuilder.CloseableBuffer buf = allocator.getAllocated();
         if (buf == null) {
             return null;
         }
 
         int indexCount = drawMode.getIndexCount(vertexCount);
         VertexFormat.IndexType indexType = VertexFormat.IndexType.smallestFor(vertexCount);
-        return new BuiltBuffer(buf,
-            new BuiltBuffer.DrawParameters(format, vertexCount, indexCount, drawMode, indexType));
+        return new MeshData(buf,
+            new MeshData.DrawParameters(format, vertexCount, indexCount, drawMode, indexType));
     }
 
     private long beginVertex() {
@@ -446,15 +446,15 @@ public class PBRVertexConsumer implements VertexConsumer {
         private final PBRVertexConsumer delegate;
         private int glintTextureID;
 
-        public GLint(PBRVertexConsumer delegate, RenderLayer glintRenderLayer) {
+        public GLint(PBRVertexConsumer delegate, RenderType glintRenderLayer) {
             this.delegate = delegate;
-            if (glintRenderLayer instanceof RenderLayer.MultiPhase) {
+            if (glintRenderLayer instanceof RenderType.MultiPhase) {
                 Identifier
                     identifier =
-                    ((RenderLayer.MultiPhase) glintRenderLayer).phases.texture.getId()
-                        .orElse(MissingSprite.getMissingSpriteId());
+                    ((RenderType.MultiPhase) glintRenderLayer).phases.texture.getId()
+                        .orElse(MissingTextureAtlasSprite.getMissingSpriteId());
                 glintTextureID =
-                    MinecraftClient.getInstance()
+                    Minecraft.getInstance()
                         .getTextureManager()
                         .getTexture(identifier)
                         .getGlId();
@@ -522,16 +522,16 @@ public class PBRVertexConsumer implements VertexConsumer {
         private float y;
         private float z;
 
-        public GLintOverlay(PBRVertexConsumer delegate, RenderLayer glintRenderLayer,
-            MatrixStack.Entry matrix, float textureScale) {
+        public GLintOverlay(PBRVertexConsumer delegate, RenderType glintRenderLayer,
+            PoseStack.Entry matrix, float textureScale) {
             this.delegate = delegate;
-            if (glintRenderLayer instanceof RenderLayer.MultiPhase) {
+            if (glintRenderLayer instanceof RenderType.MultiPhase) {
                 Identifier
                     identifier =
-                    ((RenderLayer.MultiPhase) glintRenderLayer).phases.texture.getId()
-                        .orElse(MissingSprite.getMissingSpriteId());
+                    ((RenderType.MultiPhase) glintRenderLayer).phases.texture.getId()
+                        .orElse(MissingTextureAtlasSprite.getMissingSpriteId());
                 glintTextureID =
-                    MinecraftClient.getInstance()
+                    Minecraft.getInstance()
                         .getTextureManager()
                         .getTexture(identifier)
                         .getGlId();

@@ -1,28 +1,28 @@
 package com.radiance.mixins.vulkan_render_integration;
 
-import com.mojang.blaze3d.systems.VertexSorter;
+import com.mojang.blaze3d.vertex.VertexSorting;
 import com.radiance.client.vertex.PBRVertexConsumer;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectArrayMap;
 import java.util.Map;
-import net.minecraft.block.BlockRenderType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.client.render.BuiltBuffer;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.RenderLayers;
-import net.minecraft.client.render.block.BlockModelRenderer;
-import net.minecraft.client.render.block.BlockRenderManager;
-import net.minecraft.client.render.block.entity.BlockEntityRenderDispatcher;
-import net.minecraft.client.render.chunk.BlockBufferAllocatorStorage;
-import net.minecraft.client.render.chunk.ChunkOcclusionDataBuilder;
-import net.minecraft.client.render.chunk.ChunkRendererRegion;
-import net.minecraft.client.render.chunk.SectionBuilder;
-import net.minecraft.client.util.BufferAllocator;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.util.math.random.Random;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import com.mojang.blaze3d.vertex.MeshData;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
+import net.minecraft.client.renderer.block.ModelBlockRenderer;
+import net.minecraft.client.renderer.block.BlockRenderDispatcher;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
+import net.minecraft.client.renderer.SectionBufferBuilderPack;
+import net.minecraft.client.renderer.chunk.VisGraph;
+import net.minecraft.client.renderer.chunk.RenderChunkRegion;
+import net.minecraft.client.renderer.chunk.SectionCompiler;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
+import net.minecraft.util.RandomSource;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -31,43 +31,43 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(SectionBuilder.class)
+@Mixin(SectionCompiler.class)
 public abstract class SectionBuilderMixins {
 
     @Final
     @Shadow
-    private BlockRenderManager blockRenderManager;
+    private BlockRenderDispatcher blockRenderManager;
 
     @Final
     @Shadow
     private BlockEntityRenderDispatcher blockEntityRenderDispatcher;
 
     @Shadow
-    protected abstract <E extends BlockEntity> void addBlockEntity(SectionBuilder.RenderData data,
+    protected abstract <E extends BlockEntity> void addBlockEntity(SectionCompiler.RenderData data,
         E blockEntity);
 
     @Inject(method =
-        "build(Lnet/minecraft/util/math/ChunkSectionPos;Lnet/minecraft/client/render/chunk/ChunkRendererRegion;"
+        "build(Lnet/minecraft/core/SectionPos;Lnet/minecraft/client/renderer/chunk/RenderChunkRegion;"
             +
-            "Lcom/mojang/blaze3d/systems/VertexSorter;Lnet/minecraft/client/render/chunk/BlockBufferAllocatorStorage;)"
+            "Lcom/mojang/blaze3d/vertex/VertexSorting;Lnet/minecraft/client/renderer/SectionBufferBuilderPack;)"
             +
-            "Lnet/minecraft/client/render/chunk/SectionBuilder$RenderData;", at = @At(value = "HEAD"), cancellable = true)
-    public void redirectBuild(ChunkSectionPos sectionPos,
-        ChunkRendererRegion renderRegion,
-        VertexSorter vertexSorter,
-        BlockBufferAllocatorStorage allocatorStorage,
-        CallbackInfoReturnable<SectionBuilder.RenderData> cir) {
-        SectionBuilder.RenderData renderData = new SectionBuilder.RenderData();
+            "Lnet/minecraft/client/renderer/chunk/SectionCompiler$Results;", at = @At(value = "HEAD"), cancellable = true)
+    public void redirectBuild(SectionPos sectionPos,
+        RenderChunkRegion renderRegion,
+        VertexSorting vertexSorter,
+        SectionBufferBuilderPack allocatorStorage,
+        CallbackInfoReturnable<SectionCompiler.RenderData> cir) {
+        SectionCompiler.RenderData renderData = new SectionCompiler.RenderData();
         BlockPos blockPos = sectionPos.getMinPos();
         BlockPos blockPos2 = blockPos.add(15, 15, 15);
-        ChunkOcclusionDataBuilder chunkOcclusionDataBuilder = new ChunkOcclusionDataBuilder();
-        MatrixStack matrixStack = new MatrixStack();
-        BlockModelRenderer.enableBrightnessCache();
-        Map<RenderLayer, PBRVertexConsumer>
+        VisGraph chunkOcclusionDataBuilder = new VisGraph();
+        PoseStack matrixStack = new PoseStack();
+        ModelBlockRenderer.enableBrightnessCache();
+        Map<RenderType, PBRVertexConsumer>
             map =
-            new Reference2ObjectArrayMap<>(RenderLayer.getBlockLayers()
+            new Reference2ObjectArrayMap<>(RenderType.getBlockLayers()
                 .size());
-        Random random = Random.create();
+        RandomSource random = RandomSource.create();
 
         for (BlockPos blockPos3 : BlockPos.iterate(blockPos, blockPos2)) {
             BlockState blockState = renderRegion.getBlockState(blockPos3);
@@ -84,30 +84,30 @@ public abstract class SectionBuilderMixins {
 
             FluidState fluidState = blockState.getFluidState();
             if (!fluidState.isEmpty()) {
-                RenderLayer renderLayer = RenderLayers.getFluidLayer(fluidState);
+                RenderType renderLayer = ItemBlockRenderTypes.getFluidLayer(fluidState);
                 PBRVertexConsumer bufferBuilder = this.beginBufferBuilding(map, allocatorStorage,
                     renderLayer);
                 this.blockRenderManager.renderFluid(blockPos3, renderRegion, bufferBuilder,
                     blockState, fluidState);
             }
 
-            if (blockState.getRenderType() == BlockRenderType.MODEL) {
-                RenderLayer renderLayer = RenderLayers.getBlockLayer(blockState);
+            if (blockState.getRenderType() == RenderShape.MODEL) {
+                RenderType renderLayer = ItemBlockRenderTypes.getBlockLayer(blockState);
                 PBRVertexConsumer bufferBuilder = this.beginBufferBuilding(map, allocatorStorage,
                     renderLayer);
                 matrixStack.push();
-                matrixStack.translate((float) ChunkSectionPos.getLocalCoord(blockPos3.getX()),
-                    (float) ChunkSectionPos.getLocalCoord(blockPos3.getY()),
-                    (float) ChunkSectionPos.getLocalCoord(blockPos3.getZ()));
+                matrixStack.translate((float) SectionPos.getLocalCoord(blockPos3.getX()),
+                    (float) SectionPos.getLocalCoord(blockPos3.getY()),
+                    (float) SectionPos.getLocalCoord(blockPos3.getZ()));
                 this.blockRenderManager.renderBlock(blockState, blockPos3, renderRegion,
                     matrixStack, bufferBuilder, true, random);
                 matrixStack.pop();
             }
         }
 
-        for (Map.Entry<RenderLayer, PBRVertexConsumer> entry : map.entrySet()) {
-            RenderLayer renderLayer2 = entry.getKey();
-            BuiltBuffer
+        for (Map.Entry<RenderType, PBRVertexConsumer> entry : map.entrySet()) {
+            RenderType renderLayer2 = entry.getKey();
+            MeshData
                 builtBuffer =
                 entry.getValue()
                     .endNullable();
@@ -116,18 +116,18 @@ public abstract class SectionBuilderMixins {
             }
         }
 
-        BlockModelRenderer.disableBrightnessCache();
+        ModelBlockRenderer.disableBrightnessCache();
         renderData.chunkOcclusionData = chunkOcclusionDataBuilder.build();
         cir.setReturnValue(renderData);
     }
 
     @Unique
-    private PBRVertexConsumer beginBufferBuilding(Map<RenderLayer, PBRVertexConsumer> builders,
-        BlockBufferAllocatorStorage allocatorStorage,
-        RenderLayer layer) {
+    private PBRVertexConsumer beginBufferBuilding(Map<RenderType, PBRVertexConsumer> builders,
+        SectionBufferBuilderPack allocatorStorage,
+        RenderType layer) {
         PBRVertexConsumer pbrVertexConsumer = builders.get(layer);
         if (pbrVertexConsumer == null) {
-            BufferAllocator bufferAllocator = allocatorStorage.get(layer);
+            ByteBufferBuilder bufferAllocator = allocatorStorage.get(layer);
             pbrVertexConsumer = new PBRVertexConsumer(bufferAllocator, layer);
             builders.put(layer, pbrVertexConsumer);
         }

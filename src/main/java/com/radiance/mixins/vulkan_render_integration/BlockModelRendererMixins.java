@@ -2,14 +2,14 @@ package com.radiance.mixins.vulkan_render_integration;
 
 import com.radiance.client.vertex.PBRVertexConsumer;
 import com.radiance.mixin_related.extensions.vulkan_render_integration.IBlockColorsExt;
-import net.minecraft.block.BlockState;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.client.color.block.BlockColors;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.block.BlockModelRenderer;
-import net.minecraft.client.render.model.BakedQuad;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.BlockRenderView;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.block.ModelBlockRenderer;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.core.BlockPos;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(BlockModelRenderer.class)
+@Mixin(ModelBlockRenderer.class)
 public class BlockModelRendererMixins {
 
     @Final
@@ -25,18 +25,18 @@ public class BlockModelRendererMixins {
     private BlockColors colors;
 
     @Inject(method =
-        "renderQuad(Lnet/minecraft/world/BlockRenderView;Lnet/minecraft/block/BlockState;Lnet/minecraft/util/math/BlockPos;"
+        "renderQuad(Lnet/minecraft/world/level/BlockAndTintGetter;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;"
             +
-            "Lnet/minecraft/client/render/VertexConsumer;Lnet/minecraft/client/util/math/MatrixStack$Entry;"
+            "Lcom/mojang/blaze3d/vertex/VertexConsumer;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;"
             +
-            "Lnet/minecraft/client/render/model/BakedQuad;FFFFIIIII)V",
+            "Lnet/minecraft/client/renderer/block/model/BakedQuad;FFFFIIIII)V",
         at = @At(value = "HEAD"),
         cancellable = true)
-    public void redirectRenderQuad(BlockRenderView world,
+    public void redirectRenderQuad(BlockAndTintGetter world,
         BlockState state,
         BlockPos pos,
         VertexConsumer vertexConsumer,
-        MatrixStack.Entry matrixEntry,
+        PoseStack.Entry matrixEntry,
         BakedQuad quad,
         float brightness0,
         float brightness1,

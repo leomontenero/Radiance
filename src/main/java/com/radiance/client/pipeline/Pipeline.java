@@ -5,7 +5,7 @@ import com.radiance.client.constant.VulkanConstants;
 import com.radiance.client.option.Options;
 import com.radiance.client.pipeline.config.AttributeConfig;
 import com.radiance.client.pipeline.config.ImageConfig;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -320,7 +320,7 @@ public class Pipeline {
     }
 
     private static Path getMinecraftShaderPackDirectory() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client == null || client.runDirectory == null) {
             return null;
         }
@@ -1390,7 +1390,7 @@ public class Pipeline {
     public static native boolean isNativeRebuildActive();
 
     private static String getCurrentLanguageCode() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client != null) {
             var languageManager = client.getLanguageManager();
             if (languageManager != null) {

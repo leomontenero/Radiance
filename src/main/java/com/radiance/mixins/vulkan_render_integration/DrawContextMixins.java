@@ -1,29 +1,29 @@
 package com.radiance.mixins.vulkan_render_integration;
 
 import com.radiance.mixin_related.extensions.vulkan_render_integration.IDrawContextExt;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import com.mojang.blaze3d.vertex.PoseStack;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
-@Mixin(DrawContext.class)
+@Mixin(GuiGraphics.class)
 public class DrawContextMixins implements IDrawContextExt {
 
     @Final
     @Shadow
-    private MatrixStack matrices;
+    private PoseStack matrices;
 
     @Final
     @Shadow
-    private VertexConsumerProvider.Immediate vertexConsumers;
+    private MultiBufferSource.Immediate vertexConsumers;
 
     @Override
-    public void radiance$drawOrientedQuad(RenderLayer layer, float x1, float y1, float x2,
+    public void radiance$drawOrientedQuad(RenderType layer, float x1, float y1, float x2,
         float y2, float thickness, int color) {
         float dx = x2 - x1;
         float dy = y2 - y1;

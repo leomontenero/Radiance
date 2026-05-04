@@ -3,19 +3,19 @@ package com.radiance.mixins.vulkan_render_integration;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.radiance.client.UnsafeManager;
 import com.radiance.mixin_related.extensions.vulkan_render_integration.ILightMapManagerExt;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.SimpleFramebuffer;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.profiler.Profiler;
-import net.minecraft.util.profiler.Profilers;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.pipeline.TextureTarget;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.LightTexture;
+import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
+import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.util.profiling.ProfilerFiller;
 import org.joml.Vector3f;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
@@ -28,7 +28,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(LightmapTextureManager.class)
+@Mixin(LightTexture.class)
 public abstract class LightmapTextureManagerMixins implements ILightMapManagerExt {
 
     @Unique
@@ -50,7 +50,7 @@ public abstract class LightmapTextureManagerMixins implements ILightMapManagerEx
     @Unique
     private float brightnessFactor = 0;
     @Unique
-    private NativeImageBackedTexture radiance$texture;
+    private DynamicTexture radiance$texture;
     @Unique
     private NativeImage radiance$image;
     @Unique
@@ -59,7 +59,7 @@ public abstract class LightmapTextureManagerMixins implements ILightMapManagerEx
     @Mutable
     @Final
     @Shadow
-    private SimpleFramebuffer lightmapFramebuffer;
+    private TextureTarget lightmapFramebuffer;
     @Shadow
     private boolean dirty;
     @Shadow
@@ -69,49 +69,49 @@ public abstract class LightmapTextureManagerMixins implements ILightMapManagerEx
     private GameRenderer renderer;
     @Final
     @Shadow
-    private MinecraftClient client;
+    private Minecraft client;
 
     // region <init>
-    @Redirect(method = "<init>(Lnet/minecraft/client/render/GameRenderer;Lnet/minecraft/client/MinecraftClient;)V",
-        at = @At(value = "NEW", target = "net/minecraft/client/gl/SimpleFramebuffer"))
-    public SimpleFramebuffer cancelFramebufferConstruction(int width, int height,
+    @Redirect(method = "<init>(Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/Minecraft;)V",
+        at = @At(value = "NEW", target = "com/mojang/blaze3d/pipeline/TextureTarget"))
+    public TextureTarget cancelFramebufferConstruction(int width, int height,
         boolean useDepth) {
-        return UnsafeManager.INSTANCE.allocateInstance(SimpleFramebuffer.class);
+        return UnsafeManager.INSTANCE.allocateInstance(TextureTarget.class);
     }
 
     @Redirect(method = "<init>",
         at = @At(value = "FIELD",
-            target = "Lnet/minecraft/client/render/LightmapTextureManager;" +
-                "lightmapFramebuffer:Lnet/minecraft/client/gl/SimpleFramebuffer;",
+            target = "Lnet/minecraft/client/renderer/LightTexture;" +
+                "lightmapFramebuffer:Lcom/mojang/blaze3d/pipeline/TextureTarget;",
             opcode = Opcodes.PUTFIELD))
-    public void writeNullFramebuffer(LightmapTextureManager instance, SimpleFramebuffer value) {
+    public void writeNullFramebuffer(LightTexture instance, TextureTarget value) {
         this.lightmapFramebuffer = null;
     }
 
-    @Redirect(method = "<init>(Lnet/minecraft/client/render/GameRenderer;Lnet/minecraft/client/MinecraftClient;)V",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gl/SimpleFramebuffer;setTexFilter(I)V"))
-    public void cancelFramebufferSetTexFilter(SimpleFramebuffer instance, int i) {
+    @Redirect(method = "<init>(Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/Minecraft;)V",
+        at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/pipeline/TextureTarget;setTexFilter(I)V"))
+    public void cancelFramebufferSetTexFilter(TextureTarget instance, int i) {
 
     }
 
-    @Redirect(method = "<init>(Lnet/minecraft/client/render/GameRenderer;Lnet/minecraft/client/MinecraftClient;)V",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gl/SimpleFramebuffer;setClearColor(FFFF)V"))
-    public void cancelFramebufferSetClearColor(SimpleFramebuffer instance, float r, float g,
+    @Redirect(method = "<init>(Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/Minecraft;)V",
+        at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/pipeline/TextureTarget;setClearColor(FFFF)V"))
+    public void cancelFramebufferSetClearColor(TextureTarget instance, float r, float g,
         float b, float a) {
 
     }
 
-    @Redirect(method = "<init>(Lnet/minecraft/client/render/GameRenderer;Lnet/minecraft/client/MinecraftClient;)V",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gl/SimpleFramebuffer;clear()V"))
-    public void cancelFramebufferClear(SimpleFramebuffer instance) {
+    @Redirect(method = "<init>(Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/Minecraft;)V",
+        at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/pipeline/TextureTarget;clear()V"))
+    public void cancelFramebufferClear(TextureTarget instance) {
 
     }
 
-    @Inject(method = "<init>(Lnet/minecraft/client/render/GameRenderer;Lnet/minecraft/client/MinecraftClient;)V",
+    @Inject(method = "<init>(Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/Minecraft;)V",
         at = @At("TAIL"))
-    public void initJavaLightmapTexture(GameRenderer renderer, MinecraftClient client,
+    public void initJavaLightmapTexture(GameRenderer renderer, Minecraft client,
         CallbackInfo ci) {
-        this.radiance$texture = new NativeImageBackedTexture(16, 16, false);
+        this.radiance$texture = new DynamicTexture(16, 16, false);
         this.radiance$textureIdentifier = Identifier.of("radiance", "dynamic/light_map");
         this.client.getTextureManager()
             .registerTexture(this.radiance$textureIdentifier, this.radiance$texture);
@@ -133,8 +133,8 @@ public abstract class LightmapTextureManagerMixins implements ILightMapManagerEx
     // endregion
 
     // region <close>
-    @Redirect(method = "close()V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gl/SimpleFramebuffer;delete()V"))
-    public void cancelFramebufferDelete(SimpleFramebuffer instance) {
+    @Redirect(method = "close()V", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/pipeline/TextureTarget;delete()V"))
+    public void cancelFramebufferDelete(TextureTarget instance) {
 
     }
 
@@ -180,9 +180,9 @@ public abstract class LightmapTextureManagerMixins implements ILightMapManagerEx
     public void redirectUpdate(float delta, CallbackInfo ci) {
         if (this.dirty) {
             this.dirty = false;
-            Profiler profiler = Profilers.get();
+            ProfilerFiller profiler = ProfilerFiller.get();
             profiler.push("lightTex");
-            ClientWorld clientWorld = this.client.world;
+            ClientLevel clientWorld = this.client.world;
             if (clientWorld != null && this.radiance$image != null && this.radiance$texture != null) {
                 float f = clientWorld.getSkyBrightness(1.0F);
                 float skyFactor;
@@ -201,11 +201,11 @@ public abstract class LightmapTextureManagerMixins implements ILightMapManagerEx
                 float darknessScale = this.getDarkness(this.client.player, i, delta) * h;
                 float k = this.client.player.getUnderwaterVisibility();
                 float nightVisionFactor;
-                if (this.client.player.hasStatusEffect(StatusEffects.NIGHT_VISION)) {
+                if (this.client.player.hasStatusEffect(MobEffects.NIGHT_VISION)) {
                     nightVisionFactor = GameRenderer.getNightVisionStrength(this.client.player,
                         delta);
                 } else if (k > 0.0F && this.client.player.hasStatusEffect(
-                    StatusEffects.CONDUIT_POWER)) {
+                    MobEffects.CONDUIT_POWER)) {
                     nightVisionFactor = k;
                 } else {
                     nightVisionFactor = 0.0F;
@@ -234,9 +234,9 @@ public abstract class LightmapTextureManagerMixins implements ILightMapManagerEx
                 Vector3f workingColor = new Vector3f();
                 for (int sky = 0; sky < 16; sky++) {
                     for (int block = 0; block < 16; block++) {
-                        float skyBrightness = LightmapTextureManager.getBrightness(
+                        float skyBrightness = LightTexture.getBrightness(
                             clientWorld.getDimension(), sky) * skyFactor;
-                        float blockBrightness = LightmapTextureManager.getBrightness(
+                        float blockBrightness = LightTexture.getBrightness(
                             clientWorld.getDimension(), block) * blockFactor;
                         float green = blockBrightness
                             * ((blockBrightness * 0.6F + 0.4F) * 0.6F + 0.4F);
@@ -312,9 +312,9 @@ public abstract class LightmapTextureManagerMixins implements ILightMapManagerEx
 
     @Unique
     private static void radiance$clamp(Vector3f vec) {
-        vec.set(MathHelper.clamp(vec.x(), 0.0F, 1.0F),
-            MathHelper.clamp(vec.y(), 0.0F, 1.0F),
-            MathHelper.clamp(vec.z(), 0.0F, 1.0F));
+        vec.set(Mth.clamp(vec.x(), 0.0F, 1.0F),
+            Mth.clamp(vec.y(), 0.0F, 1.0F),
+            Mth.clamp(vec.z(), 0.0F, 1.0F));
     }
 
     @Unique

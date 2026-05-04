@@ -1,19 +1,19 @@
 package com.radiance.mixins.vulkan_render_integration;
 
 import com.radiance.client.texture.AuxiliaryTextures;
-import net.minecraft.client.texture.atlas.AtlasSource.SpriteRegions;
-import net.minecraft.client.texture.atlas.SingleAtlasSource;
-import net.minecraft.resource.Resource;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.renderer.texture.atlas.SpriteSource.SpriteRegions;
+import net.minecraft.client.renderer.texture.atlas.sources.SingleFile;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-@Mixin(SingleAtlasSource.class)
+@Mixin(SingleFile.class)
 public class SingleAtlasSourceMixins {
 
-    @Redirect(method = "load(Lnet/minecraft/resource/ResourceManager;Lnet/minecraft/client/texture/atlas/AtlasSource$SpriteRegions;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/texture/atlas/AtlasSource$SpriteRegions;add(Lnet/minecraft/util/Identifier;Lnet/minecraft/resource/Resource;)V"))
+    @Redirect(method = "load(Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/client/renderer/texture/atlas/SpriteSource$Output;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/texture/atlas/SpriteSource$Output;add(Lnet/minecraft/resources/Identifier;Lnet/minecraft/server/packs/resources/Resource;)V"))
     public void cancelPBRLoad(SpriteRegions regions,
         Identifier id,
         Resource resource,

@@ -2,7 +2,7 @@ package com.radiance.client.texture;
 
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.texture.NativeImage;
+import com.mojang.blaze3d.platform.NativeImage;
 import org.jetbrains.annotations.Nullable;
 
 public final class EmissionRecorder {

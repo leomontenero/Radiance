@@ -1,15 +1,15 @@
 package com.radiance.client.gui;
 
 import com.radiance.client.pipeline.Pipeline;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.ObjectSelectionList;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +32,7 @@ public class ShaderPackScreen extends Screen {
     private ShaderPackListWidget shaderPackList;
 
     public ShaderPackScreen(Screen parent) {
-        super(Text.translatable(TITLE));
+        super(Component.translatable(TITLE));
         this.parent = parent;
     }
 
@@ -47,65 +47,65 @@ public class ShaderPackScreen extends Screen {
         int footerY = this.height - 28;
         int footerX = (this.width - (FOOTER_BUTTON_WIDTH * 2 + FOOTER_BUTTON_GAP)) / 2;
 
-        addDrawableChild(ButtonWidget.builder(Text.translatable(BACK), button -> close())
+        addDrawableChild(Button.builder(Component.translatable(BACK), button -> close())
             .dimensions(footerX, footerY, FOOTER_BUTTON_WIDTH, 20)
             .build());
 
-        addDrawableChild(ButtonWidget.builder(Text.translatable(SHADER_SETTINGS),
-                button -> MinecraftClient.getInstance().setScreen(new ShaderPackSettingsScreen(this)))
+        addDrawableChild(Button.builder(Component.translatable(SHADER_SETTINGS),
+                button -> Minecraft.getInstance().setScreen(new ShaderPackSettingsScreen(this)))
             .dimensions(footerX + FOOTER_BUTTON_WIDTH + FOOTER_BUTTON_GAP, footerY, FOOTER_BUTTON_WIDTH, 20)
             .build());
     }
 
     @Override
     public void close() {
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         this.renderBackground(context, mouseX, mouseY, delta);
         super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(textRenderer, Text.translatable(TITLE), this.width / 2, 16, 0xFFFFFF);
+        context.drawCenteredTextWithShadow(textRenderer, Component.translatable(TITLE), this.width / 2, 16, 0xFFFFFF);
 
-        Text hoveredTooltip = shaderPackList == null ? null : shaderPackList.getHoveredTooltip();
+        Component hoveredTooltip = shaderPackList == null ? null : shaderPackList.getHoveredTooltip();
         if (hoveredTooltip != null) {
             context.drawTooltip(this.textRenderer, hoveredTooltip, mouseX, mouseY);
         }
 
         if (entries.isEmpty()) {
-            context.drawCenteredTextWithShadow(textRenderer, Text.translatable(EMPTY), this.width / 2, LIST_TOP + 10, 0xB0B0B0);
+            context.drawCenteredTextWithShadow(textRenderer, Component.translatable(EMPTY), this.width / 2, LIST_TOP + 10, 0xB0B0B0);
         }
     }
 
-    private Text buildLabel(Pipeline.ShaderPackChoice choice) {
-        Text label = parseLegacyFormattedText(choice.displayName());
+    private Component buildLabel(Pipeline.ShaderPackChoice choice) {
+        Component label = parseLegacyFormattedText(choice.displayName());
         if (Pipeline.isShaderPackActive(choice)) {
-            label = Text.literal("> ").append(label);
+            label = Component.literal("> ").append(label);
         }
         return label;
     }
 
-    private Text parseLegacyFormattedText(String raw) {
+    private Component parseLegacyFormattedText(String raw) {
         if (raw == null || raw.isEmpty()) {
-            return Text.empty();
+            return Component.empty();
         }
 
-        MutableText result = Text.empty();
+        MutableComponent result = Component.empty();
         Style style = Style.EMPTY;
         StringBuilder segment = new StringBuilder();
 
         for (int i = 0; i < raw.length(); i++) {
             char current = raw.charAt(i);
-            if (current == Formatting.FORMATTING_CODE_PREFIX && i + 1 < raw.length()) {
-                Formatting formatting = Formatting.byCode(raw.charAt(i + 1));
+            if (current == ChatFormatting.FORMATTING_CODE_PREFIX && i + 1 < raw.length()) {
+                ChatFormatting formatting = ChatFormatting.byCode(raw.charAt(i + 1));
                 if (formatting != null) {
                     if (segment.length() > 0) {
-                        result.append(Text.literal(segment.toString()).setStyle(style));
+                        result.append(Component.literal(segment.toString()).setStyle(style));
                         segment.setLength(0);
                     }
 
-                    if (formatting == Formatting.RESET) {
+                    if (formatting == ChatFormatting.RESET) {
                         style = Style.EMPTY;
                     } else if (formatting.isColor()) {
                         style = style.withExclusiveFormatting(formatting);
@@ -120,14 +120,14 @@ public class ShaderPackScreen extends Screen {
         }
 
         if (segment.length() > 0) {
-            result.append(Text.literal(segment.toString()).setStyle(style));
+            result.append(Component.literal(segment.toString()).setStyle(style));
         }
 
         return result;
     }
 
-    class ShaderPackListWidget extends AlwaysSelectedEntryListWidget<ShaderPackListWidget.ShaderPackEntry> {
-        ShaderPackListWidget(MinecraftClient client, int width, int height, int y, int itemHeight) {
+    class ShaderPackListWidget extends ObjectSelectionList<ShaderPackListWidget.ShaderPackEntry> {
+        ShaderPackListWidget(Minecraft client, int width, int height, int y, int itemHeight) {
             super(client, width, height, y, itemHeight);
             this.centerListVertically = false;
 
@@ -158,7 +158,7 @@ public class ShaderPackScreen extends Screen {
         }
 
         @Override
-        public void setFocused(net.minecraft.client.gui.Element focused) {
+        public void setFocused(net.minecraft.client.gui.components.events.GuiEventListener focused) {
             if (focused instanceof ShaderPackEntry entry && !Pipeline.isShaderPackSelectable(entry.choice)) {
                 return;
             }
@@ -174,12 +174,12 @@ public class ShaderPackScreen extends Screen {
             return super.mouseClicked(mouseX, mouseY, button);
         }
 
-        private Text getHoveredTooltip() {
+        private Component getHoveredTooltip() {
             ShaderPackEntry entry = this.getHoveredEntry();
             return entry == null ? null : entry.getUnavailableReason();
         }
 
-        class ShaderPackEntry extends AlwaysSelectedEntryListWidget.Entry<ShaderPackEntry> {
+        class ShaderPackEntry extends ObjectSelectionList.Entry<ShaderPackEntry> {
             private final Pipeline.ShaderPackChoice choice;
 
             ShaderPackEntry(Pipeline.ShaderPackChoice choice) {
@@ -187,7 +187,7 @@ public class ShaderPackScreen extends Screen {
             }
 
             @Override
-            public void render(DrawContext context,
+            public void render(GuiGraphics context,
                                int index,
                                int y,
                                int x,
@@ -207,9 +207,9 @@ public class ShaderPackScreen extends Screen {
                 );
             }
 
-            private Text getUnavailableReason() {
+            private Component getUnavailableReason() {
                 String translationKey = Pipeline.getShaderPackUnavailabilityReasonTranslationKey(this.choice);
-                return translationKey == null ? null : Text.translatable(translationKey);
+                return translationKey == null ? null : Component.translatable(translationKey);
             }
 
             @Override
@@ -223,8 +223,8 @@ public class ShaderPackScreen extends Screen {
             }
 
             @Override
-            public Text getNarration() {
-                return Text.translatable("narrator.select", ShaderPackScreen.this.buildLabel(this.choice));
+            public Component getNarration() {
+                return Component.translatable("narrator.select", ShaderPackScreen.this.buildLabel(this.choice));
             }
         }
     }

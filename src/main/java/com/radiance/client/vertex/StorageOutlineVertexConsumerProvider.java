@@ -3,14 +3,14 @@ package com.radiance.client.vertex;
 import java.util.Optional;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.VertexConsumers;
-import net.minecraft.util.math.ColorHelper;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import com.mojang.blaze3d.vertex.VertexMultiConsumer;
+import net.minecraft.util.ARGB;
 
 @Environment(EnvType.CLIENT)
-public class StorageOutlineVertexConsumerProvider implements VertexConsumerProvider {
+public class StorageOutlineVertexConsumerProvider implements MultiBufferSource {
 
     private final StorageVertexConsumerProvider parent;
     private int red = 255;
@@ -23,14 +23,14 @@ public class StorageOutlineVertexConsumerProvider implements VertexConsumerProvi
     }
 
     @Override
-    public VertexConsumer getBuffer(RenderLayer renderLayer) {
+    public VertexConsumer getBuffer(RenderType renderLayer) {
         if (renderLayer.isOutline()) {
             VertexConsumer vertexConsumer = this.parent.getBuffer(renderLayer);
             return new OutlineVertexConsumer(vertexConsumer, this.red, this.green, this.blue,
                 this.alpha);
         } else {
             VertexConsumer vertexConsumer = this.parent.getBuffer(renderLayer);
-            Optional<RenderLayer> optional = renderLayer.getAffectedOutline();
+            Optional<RenderType> optional = renderLayer.getAffectedOutline();
             if (optional.isPresent()) {
                 VertexConsumer vertexConsumer2 = this.parent.getBuffer(
                     optional.get());
@@ -38,7 +38,7 @@ public class StorageOutlineVertexConsumerProvider implements VertexConsumerProvi
                     outlineVertexConsumer =
                     new OutlineVertexConsumer(vertexConsumer2, this.red, this.green, this.blue,
                         this.alpha);
-                return VertexConsumers.union(outlineVertexConsumer, vertexConsumer);
+                return VertexMultiConsumer.union(outlineVertexConsumer, vertexConsumer);
             } else {
                 return vertexConsumer;
             }
@@ -57,7 +57,7 @@ public class StorageOutlineVertexConsumerProvider implements VertexConsumerProvi
 
         public OutlineVertexConsumer(VertexConsumer delegate, int red, int green, int blue,
             int alpha) {
-            this(delegate, ColorHelper.getArgb(alpha, red, green, blue));
+            this(delegate, ARGB.getArgb(alpha, red, green, blue));
         }
 
         @Override

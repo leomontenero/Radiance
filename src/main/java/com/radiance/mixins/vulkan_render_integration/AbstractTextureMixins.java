@@ -4,7 +4,7 @@ import com.mojang.blaze3d.platform.TextureUtil;
 import com.radiance.client.constant.VulkanConstants;
 import com.radiance.client.proxy.vulkan.TextureProxy;
 import com.radiance.mixin_related.extensions.vulkan_render_integration.IAbstractTextureExt;
-import net.minecraft.client.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.AbstractTexture;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -58,7 +58,7 @@ public class AbstractTextureMixins implements IAbstractTextureExt {
         return this.glId;
     }
 
-    @Inject(method = "Lnet/minecraft/client/texture/AbstractTexture;getGlId()I", at = @At(value = "HEAD"), cancellable = true)
+    @Inject(method = "Lnet/minecraft/client/renderer/texture/AbstractTexture;getGlId()I", at = @At(value = "HEAD"), cancellable = true)
     public void redirectGetGlId(CallbackInfoReturnable<Integer> cir) {
         synchronized (AbstractTextureMixins.class) {
             if (this.glId == -1) {

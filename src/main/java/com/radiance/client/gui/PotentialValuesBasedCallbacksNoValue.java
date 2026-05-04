@@ -7,15 +7,15 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.gui.widget.CyclingButtonWidget;
-import net.minecraft.client.option.GameOptions;
-import net.minecraft.client.option.SimpleOption;
-import net.minecraft.client.option.SimpleOption.TooltipFactory;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.CycleButton;
+import net.minecraft.client.Options;
+import net.minecraft.client.OptionInstance;
+import net.minecraft.client.OptionInstance.TooltipFactory;
 
 @Environment(EnvType.CLIENT)
 public record PotentialValuesBasedCallbacksNoValue<T>(List<T> values, Codec<T> codec) implements
-    SimpleOption.CyclingCallbacks<T> {
+    OptionInstance.CyclingCallbacks<T> {
 
     @Override
     public Optional<T> validate(T value) {
@@ -23,15 +23,15 @@ public record PotentialValuesBasedCallbacksNoValue<T>(List<T> values, Codec<T> c
     }
 
     @Override
-    public CyclingButtonWidget.Values<T> getValues() {
-        return CyclingButtonWidget.Values.of(this.values);
+    public CycleButton.Values<T> getValues() {
+        return CycleButton.Values.of(this.values);
     }
 
     @Override
-    public Function<SimpleOption<T>, ClickableWidget> getWidgetCreator(
-        TooltipFactory<T> tooltipFactory, GameOptions gameOptions, int x, int y, int width,
+    public Function<OptionInstance<T>, AbstractWidget> getWidgetCreator(
+        TooltipFactory<T> tooltipFactory, Options gameOptions, int x, int y, int width,
         Consumer<T> changeCallback) {
-        return option -> CyclingButtonWidget.<T>builder(option.textGetter)
+        return option -> CycleButton.<T>builder(option.textGetter)
             .values(this.getValues())
             .tooltip(tooltipFactory)
             .initially(option.getValue())

@@ -1,3 +1,7 @@
+# Port tooling and build logs (port/26.1.2 branch)
+.port-tools/
+port-build.log
+
 # User-specific stuff
 .idea/
 

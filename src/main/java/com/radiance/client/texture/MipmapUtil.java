@@ -1,8 +1,8 @@
 package com.radiance.client.texture;
 
-import net.minecraft.client.texture.NativeImage;
+import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.util.Util;
-import net.minecraft.util.math.ColorHelper;
+import net.minecraft.util.ARGB;
 
 public class MipmapUtil {
 
@@ -134,7 +134,7 @@ public class MipmapUtil {
     public static boolean hasAlpha(NativeImage image) {
         for (int i = 0; i < image.getWidth(); i++) {
             for (int j = 0; j < image.getHeight(); j++) {
-                if (ColorHelper.getAlpha(image.getColorArgb(i, j)) == 0) {
+                if (ARGB.getAlpha(image.getColorArgb(i, j)) == 0) {
                     return true;
                 }
             }
@@ -174,12 +174,12 @@ public class MipmapUtil {
 
         if (checkAlpha) {
             float alphaCoverage =
-                (ColorHelper.getAlpha(one) + ColorHelper.getAlpha(two) + ColorHelper.getAlpha(three)
-                    + ColorHelper.getAlpha(four)) / (4.0F * 255.0F);
+                (ARGB.getAlpha(one) + ARGB.getAlpha(two) + ARGB.getAlpha(three)
+                    + ARGB.getAlpha(four)) / (4.0F * 255.0F);
             resA = alphaCoverage >= CUTOUT_ALPHA_COVERAGE_THRESHOLD ? 255 : 0;
         }
 
-        return ColorHelper.getArgb(resA, resR, resG, resB);
+        return ARGB.getArgb(resA, resR, resG, resB);
     }
 
     public static int getColorComponent(int one, int two, int three, int four, int bits) {

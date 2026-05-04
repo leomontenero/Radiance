@@ -1,23 +1,23 @@
 package com.radiance.mixins.vulkan_render_integration;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.Framebuffer;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.util.ScreenshotRecorder;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.client.Screenshot;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(ScreenshotRecorder.class)
+@Mixin(Screenshot.class)
 public class ScreenshotRecorderMixins {
 
-    @Inject(method = "takeScreenshot(Lnet/minecraft/client/gl/Framebuffer;)Lnet/minecraft/client/texture/NativeImage;",
+    @Inject(method = "takeScreenshot(Lcom/mojang/blaze3d/pipeline/RenderTarget;)Lcom/mojang/blaze3d/platform/NativeImage;",
         at = @At(value = "HEAD"),
         cancellable = true)
-    private static void redirectTakeScreenshot(Framebuffer framebuffer,
+    private static void redirectTakeScreenshot(RenderTarget framebuffer,
         CallbackInfoReturnable<NativeImage> cir) {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         int
             width =
             mc.getWindow()

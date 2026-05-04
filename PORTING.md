@@ -29,7 +29,14 @@ Tracking branch: `port/26.1.2`. Source baseline: `main` @ MC `1.21.4` / Java 21 
 - [ ] `src/main/resources/fabric.mod.json`: `depends.minecraft` to `">=26.1 <26.2"`.
 - [ ] First build attempt: `./gradlew build`. Expect a wall of "cannot find symbol" / mixin target errors — capture the output, decide rename strategy from there.
 
-## Stage 1 — Java source rename (yarn → Mojang official)
+## Stage 1 — Java source rename (yarn → Mojang official) — **PARTIAL**
+
+Automated rename complete using a yarn 1.21.4 → mojmap 1.21.4 bridge plus a
+26.1 import-path correction pass and a small hand-curated 1.21.4→26.1 rename
+table. Tooling under `.port-tools/` (gitignored). Build still failing — see
+"Stage 1 residuals" below.
+
+
 
 - [ ] `src/main/java/com/radiance/client/RadianceClient.java` — `MinecraftClient` → `Minecraft`, `runDirectory` accessor, etc.
 - [ ] `src/main/java/com/radiance/client/proxy/vulkan/*.java` — every vanilla type referenced (NativeImage, Window, VertexFormat, ...).
@@ -41,6 +48,46 @@ Tracking branch: `port/26.1.2`. Source baseline: `main` @ MC `1.21.4` / Java 21 
 - [ ] `src/main/java/com/radiance/client/util/**`.
 - [ ] `src/main/java/com/radiance/client/vertex/**`.
 - [ ] `src/main/java/com/radiance/client/shader/**`.
+
+## Stage 1 residuals — **MC 26.1 API refactor (manual work required)**
+
+The remaining ~200 compile errors are not yarn->mojmap mismatches. They are
+real Mojang API removals/renames between 1.21.4 and 26.1. Mojang reworked the
+rendering pipeline substantially. Top blockers, with what we know about the
+26.1 replacement:
+
+| Removed / renamed (1.21.4 mojmap)      | 26.1 status                                                     |
+|----------------------------------------|-----------------------------------------------------------------|
+| `net.minecraft.client.gui.GuiGraphics` | Removed. Only `GuiGraphicsExtractor` remains; rendering API rewritten. |
+| `com.mojang.blaze3d.font.SheetGlyphInfo` | Renamed to `com.mojang.blaze3d.font.GlyphInfo`.               |
+| `net.minecraft.client.renderer.CompiledShaderProgram` | Removed; shader pipeline reworked. |
+| `com.mojang.blaze3d.platform.NativeImage.InternalFormat` | Inner enum removed/renamed.       |
+| `net.minecraft.client.renderer.RenderStateShard` | Likely moved/refactored under new render pipeline. |
+| `net.minecraft.client.renderer.chunk.RenderChunkRegion` | Renamed `RenderSectionRegion`. |
+| `net.minecraft.client.color.block.BlockColor` | Removed/renamed; `BlockColors` registry remains. |
+| `net.minecraft.util.OptionEnum` | Removed.                                                          |
+| `net.minecraft.client.OptionInstance.TooltipFactory` | Inner type removed/renamed.                  |
+| `CycleButton.Values` | Inner type removed/renamed.                                                  |
+| `RenderType` location | Moved to `net.minecraft.client.renderer.rendertype.RenderType`.            |
+| `BlockRenderDispatcher`, `LiquidBlockRenderer`, `ItemRenderer` | Subsystems likely restructured.   |
+| `BufferUploader`, `VertexBuffer` (blaze3d.vertex) | Likely removed or rewritten under the new rendering. |
+| `LightTexture`, `FogParameters`, `DimensionSpecialEffects`, `ShaderProgramConfig` | Likely removed/refactored. |
+
+These cannot be fixed by mass rename. Each requires reading the 26.1 source and
+deciding the new API call shape, often with non-trivial behavioral changes.
+
+Suggested attack order (smallest blast radius first):
+
+- [ ] `client/constant/VulkanConstants.java` — fix `NativeImage.InternalFormat` references.
+- [ ] `client/constant/Constants.java` — `RenderType` import path; verify `VertexFormat.Mode` enum coverage.
+- [ ] `client/gui/**` — replace `GuiGraphics` with whatever 26.1 ships (likely a new render-context class). Possibly the largest manual surface.
+- [ ] `client/option/**` and `gui/PotentialValuesBasedCallbacksNoValue.java` — `OptionEnum` removal and `OptionInstance.CyclingCallbacks` rework.
+- [ ] `mixins/vulkan_render_integration/**` — many target rewritten APIs (CompiledShaderProgram, RenderStateShard, BlockRenderDispatcher, ChunkBuilder/SectionRenderDispatcher rename, RenderChunkRegion, BufferUploader). Expect to rewrite injection points.
+- [ ] `mixins/vanilla_resource_tracker/**` — font/glyph mixins target SheetGlyphInfo→GlyphInfo and possibly other renames.
+- [ ] `client/proxy/vulkan/ShaderProxy.java`, `BufferProxy.java`, `TextureProxy.java` — verify against new shader/buffer/texture vanilla APIs.
+
+Without a 26.1 fork of MCVR none of this is runtime-testable; the goal at this
+stage is just a green `./gradlew compileJava`.
 
 ## Stage 2 — Mixins (`com.radiance.mixins.*`)
 

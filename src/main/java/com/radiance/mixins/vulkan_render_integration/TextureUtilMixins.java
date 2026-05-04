@@ -2,7 +2,7 @@ package com.radiance.mixins.vulkan_render_integration;
 
 import com.mojang.blaze3d.platform.TextureUtil;
 import com.radiance.client.proxy.vulkan.TextureProxy;
-import net.minecraft.client.texture.NativeImage;
+import com.mojang.blaze3d.platform.NativeImage;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -18,7 +18,7 @@ public class TextureUtilMixins {
         cir.setReturnValue(textureId);
     }
 
-    @Inject(method = "prepareImage(Lnet/minecraft/client/texture/NativeImage$InternalFormat;IIII)V",
+    @Inject(method = "prepareImage(Lcom/mojang/blaze3d/platform/NativeImage$InternalGlFormat;IIII)V",
         at = @At(value = "INVOKE",
             target = "Lcom/mojang/blaze3d/systems/RenderSystem;assertOnRenderThreadOrInit()V",
             shift = At.Shift.AFTER,
